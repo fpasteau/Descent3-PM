@@ -202,7 +202,8 @@ static void *__SDL_mod_GetSymbol(const char *funcStr) {
 
   mprintf(0, "Looking up GL function [%s]...", funcStr);
 
-  retVal = SDL_GL_GetProcAddress(funcStr);
+  //retVal = SDL_GL_GetProcAddress(funcStr);
+  retVal = SDL_LoadFunction(OpenGLDLLInst.handle, funcStr);
 
   if (retVal == NULL)
     fprintf(stderr, " Could not find GL symbol [%s]!\n\n", funcStr);
@@ -228,10 +229,11 @@ module *LoadOpenGLDLL(const char *dllname) {
 #ifdef __LINUX__
   char *tmp = getcwd(NULL, 0);
   chdir(__orig_pwd);
-  int rc = SDL_GL_LoadLibrary(dllname[0] ? dllname : NULL);
+  //int rc = SDL_GL_LoadLibrary(dllname[0] ? dllname : NULL);
+  OpenGLDLLInst.handle = SDL_LoadObject(dllname[0] ? dllname : NULL);
   chdir(tmp);
   free(tmp);
-  if (rc < 0) {
+  if (OpenGLDLLInst.handle == NULL) {
     const char *sdlErr = SDL_GetError();
     mprintf(0, "OpenGL: Couldn't open library [%s].\n", dllname[0] ? dllname : "system default");
     mprintf(0, "OpenGL:  SDL error is [%s].", sdlErr);
@@ -239,7 +241,7 @@ module *LoadOpenGLDLL(const char *dllname) {
   }
 
   strcpy(loadedLibrary, dllname);
-
+  
 #else
   if (!mod_LoadModule(&OpenGLDLLInst, dllname, MODF_LAZY | MODF_GLOBAL)) {
     int err = mod_GetLastError();
@@ -248,6 +250,14 @@ module *LoadOpenGLDLL(const char *dllname) {
   }
 #endif
 
+/*  return &OpenGLDLLInst;
+}
+
+
+module * getGlFunctions(module *ogl){
+
+  OpenGLDLLInst = ogl;
+*/
   dglAlphaFunc = (glAlphaFunc_fp)mod_GetSymbol(&OpenGLDLLInst, "glAlphaFunc", 255);
   if (!dglAlphaFunc)
     goto dll_error;
